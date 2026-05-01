@@ -41,6 +41,7 @@ var DEFAULT_SETTINGS = {
   outputMode: "callout",
   defaultCalloutType: "quote",
   autoGenerate: true,
+  templateFolderPath: "",
   presets: [
     {
       id: 1,
@@ -90,6 +91,7 @@ function normalizeSettings(data) {
       DEFAULT_SETTINGS.defaultCalloutType
     ),
     autoGenerate: typeof raw.autoGenerate === "boolean" ? raw.autoGenerate : true,
+    templateFolderPath: normalizeFolderPath(raw.templateFolderPath),
     presets: normalizePresets(raw.presets)
   };
 }
@@ -136,6 +138,20 @@ function normalizeCalloutType(value, fallback = "quote") {
   }
   const normalized = trimmed.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
   return normalized || fallback;
+}
+function normalizeFolderPath(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim().replace(/\\/g, "/").replace(/\/+/g, "/").replace(/^\/+|\/+$/g, "");
+}
+function isFileInTemplateFolder(filePath, templateFolderPath) {
+  const folderPath = normalizeFolderPath(templateFolderPath);
+  const normalizedFilePath = normalizeFolderPath(filePath);
+  if (!folderPath || !normalizedFilePath) {
+    return false;
+  }
+  return normalizedFilePath === folderPath || normalizedFilePath.startsWith(`${folderPath}/`);
 }
 function normalizePresets(value) {
   if (!Array.isArray(value)) {
@@ -413,6 +429,12 @@ var NoteSparkSettingTab = class extends import_obsidian2.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
+    new import_obsidian2.Setting(containerEl).setName("Template folder to ignore").setDesc("Vault-relative folder path. NoteSpark will not generate inside this folder, but daily notes created from templates still generate outside it.").addText(
+      (text) => text.setPlaceholder("Templates").setValue(this.plugin.settings.templateFolderPath).onChange(async (value) => {
+        this.plugin.settings.templateFolderPath = normalizeFolderPath(value);
+        await this.plugin.saveSettings();
+      })
+    );
     containerEl.createEl("h3", { text: "Prompt presets" });
     const presetContainer = containerEl.createDiv({ cls: "notespark-presets" });
     for (const preset of this.plugin.settings.presets) {
@@ -573,7 +595,11 @@ var NoteSparkPlugin = class extends import_obsidian3.Plugin {
     this.addCommand({
       id: "regenerate-quote",
       name: "Regenerate quote",
-      editorCallback: (editor) => {
+      editorCallback: (editor, view) => {
+        if (view.file && this.shouldIgnoreFile(view.file)) {
+          new import_obsidian3.Notice("NoteSpark is disabled inside the configured template folder.");
+          return;
+        }
         this.openRegeneratePromptPicker(editor);
       }
     });
@@ -618,6 +644,9 @@ var NoteSparkPlugin = class extends import_obsidian3.Plugin {
     if (!this.settings.autoGenerate || !view.file || !hasNoteSparkTrigger(editor.getValue())) {
       return;
     }
+    if (this.shouldIgnoreFile(view.file)) {
+      return;
+    }
     if (this.autoGenerateTimer) {
       clearTimeout(this.autoGenerateTimer);
     }
@@ -627,6 +656,12 @@ var NoteSparkPlugin = class extends import_obsidian3.Plugin {
   }
   async replaceTriggersInEditor(editor, view, automatic) {
     const fileKey = getFileKey(view.file);
+    if (view.file && this.shouldIgnoreFile(view.file)) {
+      if (!automatic) {
+        new import_obsidian3.Notice("NoteSpark is disabled inside the configured template folder.");
+      }
+      return;
+    }
     if (this.processingFiles.has(fileKey)) {
       if (!automatic) {
         new import_obsidian3.Notice("NoteSpark is already generating for this note.");
@@ -671,6 +706,9 @@ var NoteSparkPlugin = class extends import_obsidian3.Plugin {
     } finally {
       this.processingFiles.delete(fileKey);
     }
+  }
+  shouldIgnoreFile(file) {
+    return isFileInTemplateFolder(file.path, this.settings.templateFolderPath);
   }
   openRegeneratePromptPicker(editor) {
     const prompts = getPromptChoices(this.settings);

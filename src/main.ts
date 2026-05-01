@@ -11,7 +11,12 @@ import {
 import { generateQuote, NoteSparkGenerationError } from "./mistralClient";
 import { formatOutput } from "./output";
 import { PromptPickerModal } from "./regenerateModal";
-import { getPromptChoices, normalizeSettings, resolvePrompt } from "./settings";
+import {
+  getPromptChoices,
+  isFileInTemplateFolder,
+  normalizeSettings,
+  resolvePrompt,
+} from "./settings";
 import { NoteSparkSettingTab } from "./settingsTab";
 import { findNoteSparkTriggers, hasNoteSparkTrigger, offsetToPosition } from "./trigger";
 import type { NoteSparkSettings, ResolvedPrompt, TextReplacement } from "./types";
@@ -47,7 +52,12 @@ export default class NoteSparkPlugin extends Plugin {
     this.addCommand({
       id: "regenerate-quote",
       name: "Regenerate quote",
-      editorCallback: (editor) => {
+      editorCallback: (editor, view) => {
+        if (view.file && this.shouldIgnoreFile(view.file)) {
+          new Notice("NoteSpark is disabled inside the configured template folder.");
+          return;
+        }
+
         this.openRegeneratePromptPicker(editor);
       },
     });
@@ -102,6 +112,10 @@ export default class NoteSparkPlugin extends Plugin {
       return;
     }
 
+    if (this.shouldIgnoreFile(view.file)) {
+      return;
+    }
+
     if (this.autoGenerateTimer) {
       clearTimeout(this.autoGenerateTimer);
     }
@@ -117,6 +131,13 @@ export default class NoteSparkPlugin extends Plugin {
     automatic: boolean,
   ): Promise<void> {
     const fileKey = getFileKey(view.file);
+
+    if (view.file && this.shouldIgnoreFile(view.file)) {
+      if (!automatic) {
+        new Notice("NoteSpark is disabled inside the configured template folder.");
+      }
+      return;
+    }
 
     if (this.processingFiles.has(fileKey)) {
       if (!automatic) {
@@ -172,6 +193,10 @@ export default class NoteSparkPlugin extends Plugin {
     } finally {
       this.processingFiles.delete(fileKey);
     }
+  }
+
+  private shouldIgnoreFile(file: TFile): boolean {
+    return isFileInTemplateFolder(file.path, this.settings.templateFolderPath);
   }
 
   private openRegeneratePromptPicker(editor: Editor): void {

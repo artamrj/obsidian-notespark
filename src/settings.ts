@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: NoteSparkSettings = {
   outputMode: "callout",
   defaultCalloutType: "quote",
   autoGenerate: true,
+  templateFolderPath: "",
   presets: [
     {
       id: 1,
@@ -63,6 +64,7 @@ export function normalizeSettings(data: Partial<NoteSparkSettings> | null | unde
       DEFAULT_SETTINGS.defaultCalloutType,
     ),
     autoGenerate: typeof raw.autoGenerate === "boolean" ? raw.autoGenerate : true,
+    templateFolderPath: normalizeFolderPath(raw.templateFolderPath),
     presets: normalizePresets(raw.presets),
   };
 }
@@ -122,6 +124,29 @@ export function normalizeCalloutType(value: unknown, fallback = "quote"): string
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
   return normalized || fallback;
+}
+
+export function normalizeFolderPath(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/^\/+|\/+$/g, "");
+}
+
+export function isFileInTemplateFolder(filePath: string, templateFolderPath: string): boolean {
+  const folderPath = normalizeFolderPath(templateFolderPath);
+  const normalizedFilePath = normalizeFolderPath(filePath);
+
+  if (!folderPath || !normalizedFilePath) {
+    return false;
+  }
+
+  return normalizedFilePath === folderPath || normalizedFilePath.startsWith(`${folderPath}/`);
 }
 
 function normalizePresets(value: unknown): PromptPreset[] {

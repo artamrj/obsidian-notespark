@@ -18,6 +18,7 @@ export interface NoteSparkSettings {
   outputMode: NoteSparkOutputMode;
   defaultCalloutType: string;
   autoGenerate: boolean;
+  templateFolderPath: string;
   presets: PromptPreset[];
 }
 
@@ -42,4 +43,3 @@ export interface TextReplacement {
   end: number;
   text: string;
 }
-

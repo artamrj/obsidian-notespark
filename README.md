@@ -38,6 +38,7 @@ NoteSpark replaces the trigger with markdown:
 - Default callout type
 - Editable prompt presets with numeric IDs, prompt text, maximum length, and optional callout type
 - Auto-generation for active markdown files
+- Template folder to ignore
 
 ## Daily Notes
 
@@ -49,7 +50,9 @@ Add a trigger to a daily note template:
 @notespark[1]
 ```
 
-When the note opens or the template content is inserted into the active editor, NoteSpark detects the standalone trigger and replaces it.
+To keep the template file unchanged, set **Template folder to ignore** to your vault-relative template folder, for example `Templates`.
+
+When a daily note is created from that template outside the ignored folder, NoteSpark detects the copied standalone trigger and replaces it in the daily note.
 
 ## Privacy and Network Use
 

@@ -1,5 +1,5 @@
 import { PluginSettingTab, Setting } from "obsidian";
-import { normalizeCalloutType } from "./settings";
+import { normalizeCalloutType, normalizeFolderPath } from "./settings";
 import type NoteSparkPlugin from "./main";
 import type { PromptPreset } from "./types";
 
@@ -134,6 +134,19 @@ export class NoteSparkSettingTab extends PluginSettingTab {
         }),
       );
 
+    new Setting(containerEl)
+      .setName("Template folder to ignore")
+      .setDesc("Vault-relative folder path. NoteSpark will not generate inside this folder, but daily notes created from templates still generate outside it.")
+      .addText((text) =>
+        text
+          .setPlaceholder("Templates")
+          .setValue(this.plugin.settings.templateFolderPath)
+          .onChange(async (value) => {
+            this.plugin.settings.templateFolderPath = normalizeFolderPath(value);
+            await this.plugin.saveSettings();
+          }),
+      );
+
     containerEl.createEl("h3", { text: "Prompt presets" });
 
     const presetContainer = containerEl.createDiv({ cls: "notespark-presets" });
@@ -219,4 +232,3 @@ function parseInteger(value: string, fallback: number): number {
 function getNextPresetId(presets: PromptPreset[]): number {
   return presets.reduce((highest, preset) => Math.max(highest, preset.id), 0) + 1;
 }
-

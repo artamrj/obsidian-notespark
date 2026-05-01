@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSettings, resolvePrompt } from "../src/settings";
+import {
+  isFileInTemplateFolder,
+  normalizeFolderPath,
+  normalizeSettings,
+  resolvePrompt,
+} from "../src/settings";
 
 describe("normalizeSettings", () => {
   it("applies defaults and clamps invalid values", () => {
@@ -10,6 +15,7 @@ describe("normalizeSettings", () => {
       requestTimeoutMs: 50,
       outputMode: "plain",
       defaultCalloutType: "daily note!",
+      templateFolderPath: "/Templates//Daily/",
       presets: [],
     });
 
@@ -19,11 +25,26 @@ describe("normalizeSettings", () => {
     expect(settings.requestTimeoutMs).toBe(1000);
     expect(settings.outputMode).toBe("plain");
     expect(settings.defaultCalloutType).toBe("daily-note");
+    expect(settings.templateFolderPath).toBe("Templates/Daily");
     expect(settings.presets).toHaveLength(0);
   });
 
   it("uses default presets when no saved preset list exists", () => {
     expect(normalizeSettings({}).presets).toHaveLength(3);
+  });
+});
+
+describe("template folder matching", () => {
+  it("normalizes vault-relative template folder paths", () => {
+    expect(normalizeFolderPath(" /Templates\\Daily// ")).toBe("Templates/Daily");
+  });
+
+  it("matches files inside the configured template folder only", () => {
+    expect(isFileInTemplateFolder("Templates/Daily.md", "Templates")).toBe(true);
+    expect(isFileInTemplateFolder("Templates/Daily/Quote.md", "Templates/Daily")).toBe(true);
+    expect(isFileInTemplateFolder("Daily/2026-05-01.md", "Templates")).toBe(false);
+    expect(isFileInTemplateFolder("Templates-old/Daily.md", "Templates")).toBe(false);
+    expect(isFileInTemplateFolder("Templates/Daily.md", "")).toBe(false);
   });
 });
 

@@ -1,0 +1,10 @@
+{
+  "id": "notespark",
+  "name": "NoteSpark",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Generate AI-powered quotes, reflections, and prompts directly inside your notes.",
+  "author": "Arta",
+  "isDesktopOnly": false
+}
+
